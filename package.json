@@ -1,0 +1,71 @@
+{
+  "name": "hatai",
+  "displayName": "Hatai",
+  "description": "Detect and redact secrets from your code and logs.",
+  "version": "0.1.0",
+  "publisher": "Hatai",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Security",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "hatai.scanFile",
+        "title": "Hatai: Scan File for Secrets"
+      },
+      {
+        "command": "hatai.redactSecrets",
+        "title": "Hatai: Redact Secrets in Current File"
+      }
+    ],
+    "configuration": {
+      "title": "Hatai",
+      "properties": {
+        "hatai.redactStrategy": {
+          "type": "string",
+          "enum": [
+            "full",
+            "partial"
+          ],
+          "default": "full",
+          "description": "Redaction strategy: 'full' (***REDACTED***) or 'partial' (sk**********ef)."
+        },
+        "hatai.whitelist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "List of strings to ignore during secret detection."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/glob": "^8.1.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.59.1",
+    "@typescript-eslint/parser": "^5.59.1",
+    "eslint": "^8.39.0",
+    "glob": "^8.1.0",
+    "typescript": "^5.0.4",
+    "vscode-test": "^1.6.1"
+  }
+}
