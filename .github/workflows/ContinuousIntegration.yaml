@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Node Install
-        run: npm Install
+        run: npm install
 
       - name: Node Build
         run: npm run build
