@@ -12,7 +12,7 @@
         "noImplicitAny": true
     },
     "exclude": [
-        "node-modules",
+        "node_modules",
         ".vscode-test"
     ]
 }

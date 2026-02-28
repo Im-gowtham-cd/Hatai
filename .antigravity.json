@@ -1,0 +1,23 @@
+{
+    "$schema": "./antigravity.schema.json",
+    "version": "1.0",
+    "teamName": "My Org",
+    "customPatterns": [
+        {
+            "id": "internal_token",
+            "type": "internal_api_token",
+            "pattern": "INT-[A-Z0-9]{32}",
+            "severity": "critical",
+            "description": "Internal service token"
+        }
+    ],
+    "whitelist": [
+        "sk-test-placeholder",
+        "example-key-1234"
+    ],
+    "redactStrategy": "placeholder",
+    "ignoredFiles": [
+        "**/*.test.ts",
+        "**/fixtures/**"
+    ]
+}

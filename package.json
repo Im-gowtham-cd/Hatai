@@ -1,15 +1,27 @@
 {
-  "name": "hatai",
-  "displayName": "Hatai",
-  "description": "Detect and redact secrets from your code and logs.",
-  "version": "0.1.0",
-  "publisher": "Hatai",
+  "name": "Hatai",
+  "displayName": "Antigravity",
+  "description": "Real-time secret detection and AI-safe redaction for VS Code. Protect your credentials before they leave your machine.",
+  "version": "1.0.0",
+  "publisher": "Antigravity",
+  "icon": "images/icon.png",
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Security",
-    "Linters"
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "secrets",
+    "security",
+    "redact",
+    "ai",
+    "clipboard",
+    "credentials",
+    "api-keys",
+    "pre-commit"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -18,33 +30,124 @@
   "contributes": {
     "commands": [
       {
-        "command": "hatai.scanFile",
-        "title": "Hatai: Scan File for Secrets"
+        "command": "antigravity.scanFile",
+        "title": "Antigravity: Scan File for Secrets",
+        "icon": "$(search)"
       },
       {
-        "command": "hatai.redactSecrets",
-        "title": "Hatai: Redact Secrets in Current File"
+        "command": "antigravity.copyForAI",
+        "title": "Antigravity: Copy for AI (Redacted)",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "antigravity.buildContext",
+        "title": "Antigravity: Build AI Context (Multi-File)",
+        "icon": "$(files)"
+      },
+      {
+        "command": "antigravity.installGitHook",
+        "title": "Antigravity: Install Git Pre-Commit Hook",
+        "icon": "$(git-commit)"
+      },
+      {
+        "command": "antigravity.showStats",
+        "title": "Antigravity: Show Stats Dashboard",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "antigravity.clearAuditLog",
+        "title": "Antigravity: Clear Audit Log",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "antigravity.markSafe",
+        "title": "Antigravity: Mark as Safe"
+      },
+      {
+        "command": "antigravity.redactLine",
+        "title": "Antigravity: Redact Secrets on Line"
+      },
+      {
+        "command": "antigravity.copyRedactedLine",
+        "title": "Antigravity: Copy Redacted Line"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "antigravity.copyForAI",
+          "group": "9_cutcopypaste@100",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "antigravity.scanFile",
+          "group": "antigravity@1",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "antigravity.buildContext",
+          "group": "antigravity@2",
+          "when": "editorTextFocus"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "antigravity.clearAuditLog",
+          "when": "view == antigravityAuditLog",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "antigravityAuditLog",
+          "name": "Antigravity: Audit Log",
+          "icon": "$(shield)",
+          "contextualTitle": "Antigravity"
+        }
+      ]
+    },
     "configuration": {
-      "title": "Hatai",
+      "title": "Antigravity",
       "properties": {
-        "hatai.redactStrategy": {
+        "antigravity.redactStrategy": {
           "type": "string",
           "enum": [
             "full",
-            "partial"
+            "partial",
+            "placeholder"
           ],
-          "default": "full",
-          "description": "Redaction strategy: 'full' (***REDACTED***) or 'partial' (sk**********ef)."
+          "default": "placeholder",
+          "markdownDescription": "Redaction strategy: `full` (***REDACTED***), `partial` (sk****ef), or `placeholder` ({{API_KEY}})."
         },
-        "hatai.whitelist": {
+        "antigravity.enableRealTimeScanning": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time secret scanning as you type (debounced 500ms)."
+        },
+        "antigravity.scanOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scan for secrets when a file is saved."
+        },
+        "antigravity.entropyThreshold": {
+          "type": "number",
+          "default": 3.5,
+          "description": "Minimum Shannon entropy to flag a high-randomness string as a potential secret."
+        },
+        "antigravity.showGutterIcons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show colored severity indicators next to detected secrets in the gutter."
+        },
+        "antigravity.ignoredPatternIds": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "default": [],
-          "description": "List of strings to ignore during secret detection."
+          "description": "List of built-in pattern IDs to ignore (e.g. ['generic_password', 'env_secret'])."
         }
       }
     }
@@ -55,17 +158,15 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "package": "npx vsce package"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
-    "@types/glob": "^8.1.0",
-    "@types/node": "16.x",
-    "@typescript-eslint/eslint-plugin": "^5.59.1",
-    "@typescript-eslint/parser": "^5.59.1",
-    "eslint": "^8.39.0",
-    "glob": "^8.1.0",
-    "typescript": "^5.0.4",
-    "vscode-test": "^1.6.1"
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "typescript": "^5.3.0"
   }
 }
