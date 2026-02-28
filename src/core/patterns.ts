@@ -1,0 +1,138 @@
+/**
+ * @module core/patterns
+ * Built-in and custom secret pattern definitions for the Antigravity detection engine.
+ */
+
+/** Severity level for a detected secret pattern. */
+export type PatternSeverity = 'critical' | 'high' | 'medium';
+
+/** Definition of a single secret detection pattern. */
+export interface PatternDefinition {
+    /** Unique identifier for this pattern. */
+    id: string;
+    /** Human-readable type category (e.g. 'aws_access_key'). */
+    type: string;
+    /** Regular expression used to match the secret. */
+    pattern: RegExp;
+    /** Severity level of the detected secret. */
+    severity: PatternSeverity;
+    /** Description of what this pattern detects. */
+    description: string;
+}
+
+/**
+ * Built-in patterns covering the most common secret types.
+ * All patterns use the global and case-insensitive flags where appropriate.
+ */
+export const BuiltInPatterns: PatternDefinition[] = [
+    // --- Critical: Cloud provider keys & private keys ---
+    {
+        id: 'aws_access_key',
+        type: 'aws_access_key',
+        pattern: /AKIA[0-9A-Z]{16}/g,
+        severity: 'critical',
+        description: 'AWS Access Key ID',
+    },
+    {
+        id: 'pem_private_key',
+        type: 'private_key',
+        pattern: /-----BEGIN\s+(?:RSA |EC |DSA |OPENSSH )?PRIVATE\s+KEY-----[\s\S]*?-----END\s+(?:RSA |EC |DSA |OPENSSH )?PRIVATE\s+KEY-----/g,
+        severity: 'critical',
+        description: 'PEM-encoded Private Key',
+    },
+    {
+        id: 'stripe_secret_key',
+        type: 'stripe_secret_key',
+        pattern: /sk_live_[a-zA-Z0-9]{24,}/g,
+        severity: 'critical',
+        description: 'Stripe Secret Key (live)',
+    },
+
+    // --- High: API tokens with known prefixes ---
+    {
+        id: 'openai_api_key',
+        type: 'openai_api_key',
+        pattern: /sk-[a-zA-Z0-9]{20,}/g,
+        severity: 'high',
+        description: 'OpenAI API Key',
+    },
+    {
+        id: 'anthropic_api_key',
+        type: 'anthropic_api_key',
+        pattern: /sk-ant-[a-zA-Z0-9-]{20,}/g,
+        severity: 'high',
+        description: 'Anthropic API Key',
+    },
+    {
+        id: 'github_token',
+        type: 'github_token',
+        pattern: /gh[pous]_[a-zA-Z0-9]{36,}/g,
+        severity: 'high',
+        description: 'GitHub Personal Access / OAuth / App Token',
+    },
+    {
+        id: 'stripe_publishable_key',
+        type: 'stripe_publishable_key',
+        pattern: /pk_live_[a-zA-Z0-9]{24,}/g,
+        severity: 'high',
+        description: 'Stripe Publishable Key (live)',
+    },
+    {
+        id: 'twilio_account_sid',
+        type: 'twilio_sid',
+        pattern: /AC[a-f0-9]{32}/g,
+        severity: 'high',
+        description: 'Twilio Account SID',
+    },
+    {
+        id: 'sendgrid_api_key',
+        type: 'sendgrid_api_key',
+        pattern: /SG\.[a-zA-Z0-9-_]{22,}\.[a-zA-Z0-9-_]{22,}/g,
+        severity: 'high',
+        description: 'SendGrid API Key',
+    },
+    {
+        id: 'google_api_key',
+        type: 'google_api_key',
+        pattern: /AIza[0-9A-Za-z_-]{35}/g,
+        severity: 'high',
+        description: 'Google API Key',
+    },
+
+    // --- Medium: Generic / format-based tokens ---
+    {
+        id: 'bearer_token',
+        type: 'bearer_token',
+        pattern: /Bearer\s+[a-zA-Z0-9\-._~+/]+=*/gi,
+        severity: 'medium',
+        description: 'Bearer Authentication Token',
+    },
+    {
+        id: 'jwt_token',
+        type: 'jwt_token',
+        pattern: /ey[a-zA-Z0-9\-_]+\.ey[a-zA-Z0-9\-_]+\.[a-zA-Z0-9\-_]+/g,
+        severity: 'medium',
+        description: 'JSON Web Token (JWT)',
+    },
+    {
+        id: 'generic_password',
+        type: 'password',
+        pattern: /(?:password|pwd|passwd)\s*[:=]\s*["']?([^"'\s,;]{4,})["']?/gi,
+        severity: 'medium',
+        description: 'Generic Password Assignment',
+    },
+    {
+        id: 'generic_secret',
+        type: 'secret',
+        pattern: /(?:secret|token|api_key|apikey)\s*[:=]\s*["']?([^"'\s,;]{4,})["']?/gi,
+        severity: 'medium',
+        description: 'Generic Secret / Token / API Key Assignment',
+    },
+    {
+        id: 'env_secret',
+        type: 'env_secret',
+        pattern: /[A-Z0-9_]+_(?:SECRET|TOKEN|KEY|PASS|PASSWORD)\s*=\s*["']?[^"'\s]+["']?/gi,
+        severity: 'medium',
+        description: 'Environment Variable Secret',
+    },
+];
