@@ -1,0 +1,33 @@
+name: Hatai CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Repo
+        uses: actions/checkout@v4
+
+      - name: Node Setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Node Install
+        run: npm Install
+
+      - name: Node Build
+        run: npm run build
+
+      - name: Node Test
+        run: npm test

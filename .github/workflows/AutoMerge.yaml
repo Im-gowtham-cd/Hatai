@@ -1,0 +1,17 @@
+name: Auto Merge Only for Im-gowtham-cd
+on:
+  pull_request:
+    types: [opened, synchronize, reopend]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'Im-gowtham-cd' && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable Auto Merge
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{secrets.GITHUB_TOKEN}}
+          merge-method: squash
