@@ -21,7 +21,15 @@ function registerCopyForAICommand(context, detectorConfig, onAuditEntry) {
             vscode.window.showInformationMessage('Hatai: ✅ Copied — no secrets found.');
             return;
         }
-        let result = (0, redactor_1.redact)(text, matches, 'placeholder');
+        const allowRead = vscode.workspace.getConfiguration('hatai').get('allowAIReadSecrets', false);
+        let result = text;
+        let summaryLabel = '!!! VISIBLE !!!';
+        let statusMsg = `Copied (${matches.length} secret(s) included)`;
+        if (!allowRead) {
+            result = (0, redactor_1.redact)(text, matches, 'placeholder');
+            summaryLabel = 'REDACTED';
+            statusMsg = `Copied (${matches.length} secret(s) redacted)`;
+        }
         const typeCounts = new Map();
         for (const m of matches) {
             typeCounts.set(m.type, (typeCounts.get(m.type) ?? 0) + 1);
@@ -30,11 +38,11 @@ function registerCopyForAICommand(context, detectorConfig, onAuditEntry) {
             .map(([type, count]) => `${count}× ${type}`)
             .join(', ');
         result +=
-            `\n\n--- HATAI REDACTION SUMMARY ---\n` +
-                `${matches.length} secret(s) redacted: ${breakdown}\n` +
-                `Safe to share with AI tools.\n`;
+            `\n\n--- HATAI REDACTION SUMMARY (${summaryLabel}) ---\n` +
+                `${matches.length} secret(s) detected: ${breakdown}\n` +
+                (allowRead ? `WARNING: Secrets are visible in this copy.\n` : `Safe to share with AI tools.\n`);
         await vscode.env.clipboard.writeText(result);
-        vscode.window.showInformationMessage(`Hatai: ✅ Copied (${matches.length} secret(s) redacted)`);
+        vscode.window.showInformationMessage(`Hatai: ✅ ${statusMsg}`);
         onAuditEntry({
             timestamp: Date.now(),
             fileName: editor.document.fileName,

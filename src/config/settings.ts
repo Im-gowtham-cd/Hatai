@@ -38,3 +38,15 @@ export function getIgnoredPatternIds(): string[] {
         .getConfiguration(SECTION)
         .get<string[]>('ignoredPatternIds', []);
 }
+
+export function allowAIReadSecrets(): boolean {
+    return vscode.workspace
+        .getConfiguration(SECTION)
+        .get<boolean>('allowAIReadSecrets', false);
+}
+
+export function allowUserCopySecrets(): boolean {
+    return vscode.workspace
+        .getConfiguration(SECTION)
+        .get<boolean>('allowUserCopySecrets', false);
+}

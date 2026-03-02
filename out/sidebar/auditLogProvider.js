@@ -21,6 +21,9 @@ class AuditLogItem extends vscode.TreeItem {
             case 'copyForAI':
                 this.iconPath = new vscode.ThemeIcon('clippy', new vscode.ThemeColor('charts.green'));
                 break;
+            case 'copySafe':
+                this.iconPath = new vscode.ThemeIcon('shield', new vscode.ThemeColor('charts.blue'));
+                break;
             case 'buildContext':
                 this.iconPath = new vscode.ThemeIcon('files', new vscode.ThemeColor('charts.purple'));
                 break;

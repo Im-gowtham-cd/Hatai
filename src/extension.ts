@@ -9,12 +9,14 @@ import { HataiHoverProvider } from './editor/hoverProvider';
 import { HataiCodeLensProvider } from './editor/codelens';
 
 import { registerCopyForAICommand } from './commands/copyForAI';
+import { registerCopySafeCommand } from './commands/copySafe';
 import { registerScanFileCommand } from './commands/scanFile';
 import { registerBuildContextCommand } from './commands/buildContext';
 import { registerInstallGitHookCommand } from './commands/installGitHook';
 
 import { AuditLogProvider, AuditLogEntry } from './sidebar/auditLogProvider';
 import { StatsProvider } from './sidebar/statsProvider';
+import { DashboardProvider } from './sidebar/dashboardProvider';
 
 import {
     isRealTimeScanningEnabled,
@@ -23,6 +25,8 @@ import {
     getIgnoredPatternIds,
     getRedactStrategy,
     showGutterIcons,
+    allowAIReadSecrets,
+    allowUserCopySecrets,
 } from './config/settings';
 import { loadPolicy, policyPatternsToDefinitions, watchPolicyFile, TeamPolicy } from './config/policyLoader';
 import { WhitelistStore } from './config/whitelist';
@@ -32,6 +36,7 @@ let hoverProvider: HataiHoverProvider;
 let codeLensProvider: HataiCodeLensProvider;
 let auditLogProvider: AuditLogProvider;
 let statsProvider: StatsProvider;
+let dashboardProvider: DashboardProvider;
 let whitelistStore: WhitelistStore;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -48,9 +53,9 @@ function buildDetectorConfig(policy: TeamPolicy | undefined): DetectorConfig {
 
 function scanDocument(document: vscode.TextDocument): void {
     const text = document.getText();
-    const matches = detectSecrets(text, detectorConfig);
+    const secrets = detectSecrets(text, detectorConfig);
 
-    const filtered = matches.filter((m) => !whitelistStore.isWhitelisted(m.value));
+    const filtered = secrets.filter((m) => !whitelistStore.isWhitelisted(m.value));
 
     updateDiagnostics(document, filtered, diagnosticCollection);
 
@@ -77,6 +82,8 @@ function debouncedScan(document: vscode.TextDocument): void {
 function addAuditEntry(entry: AuditLogEntry): void {
     auditLogProvider.addEntry(entry);
     statsProvider.refresh();
+    dashboardProvider.pushStats();
+    dashboardProvider.pushTimeline();
 }
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -101,6 +108,8 @@ export function activate(context: vscode.ExtensionContext): void {
                 for (const editor of vscode.window.visibleTextEditors) {
                     scanDocument(editor.document);
                 }
+                statsProvider.refresh();
+                dashboardProvider.pushStats();
             }
         }),
     );
@@ -123,6 +132,19 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     statsProvider = new StatsProvider(() => auditLogProvider.getEntries());
+
+    dashboardProvider = new DashboardProvider(
+        context.extensionUri,
+        context.workspaceState,
+        () => auditLogProvider.getEntries(),
+    );
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            DashboardProvider.viewType,
+            dashboardProvider,
+            { webviewOptions: { retainContextWhenHidden: true } },
+        ),
+    );
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeTextDocument((e) => {
@@ -161,6 +183,10 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(
+        registerCopySafeCommand(context, detectorConfig, addAuditEntry),
+    );
+
+    context.subscriptions.push(
         registerScanFileCommand(context, diagnosticCollection, detectorConfig, addAuditEntry),
     );
 
@@ -180,6 +206,8 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('hatai.clearAuditLog', () => {
             auditLogProvider.clearLog();
             statsProvider.refresh();
+            dashboardProvider.pushStats();
+            dashboardProvider.pushTimeline();
             vscode.window.showInformationMessage('Hatai: Audit log cleared.');
         }),
     );
@@ -265,7 +293,7 @@ export function activate(context: vscode.ExtensionContext): void {
             )
             .then((choice) => {
                 if (choice === 'Open Dashboard') {
-                    statsProvider.show();
+                    void vscode.commands.executeCommand('hatai.dashboard.focus');
                 }
             });
         void context.globalState.update('hatai.welcomeShown', true);

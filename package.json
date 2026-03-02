@@ -4,6 +4,10 @@
   "description": "Real-time secret detection and AI-safe redaction for VS Code. Protect your credentials before they leave your machine.",
   "version": "1.0.0",
   "publisher": "Hatai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Im-gowtham-cd/Hatai"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -23,10 +27,37 @@
     "pre-commit"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:hatai.dashboard"
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "hatai",
+          "title": "Hatai",
+          "icon": "media/hatai-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "hatai": [
+        {
+          "type": "webview",
+          "id": "hatai.dashboard",
+          "name": "Dashboard"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "hataiAuditLog",
+          "name": "Hatai: Audit Log",
+          "icon": "$(shield)",
+          "contextualTitle": "Hatai"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "hatai.scanFile",
@@ -37,6 +68,11 @@
         "command": "hatai.copyForAI",
         "title": "Hatai: Copy for AI (Redacted)",
         "icon": "$(clippy)"
+      },
+      {
+        "command": "hatai.copySafe",
+        "title": "Hatai: Copy Safely (Policy-Enforced)",
+        "icon": "$(shield)"
       },
       {
         "command": "hatai.buildContext",
@@ -79,6 +115,11 @@
           "when": "editorTextFocus"
         },
         {
+          "command": "hatai.copySafe",
+          "group": "9_cutcopypaste@101",
+          "when": "editorTextFocus"
+        },
+        {
           "command": "hatai.scanFile",
           "group": "hatai@1",
           "when": "editorTextFocus"
@@ -94,16 +135,6 @@
           "command": "hatai.clearAuditLog",
           "when": "view == hataiAuditLog",
           "group": "navigation"
-        }
-      ]
-    },
-    "views": {
-      "explorer": [
-        {
-          "id": "hataiAuditLog",
-          "name": "Hatai: Audit Log",
-          "icon": "$(shield)",
-          "contextualTitle": "Hatai"
         }
       ]
     },
@@ -129,6 +160,16 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically scan for secrets when a file is saved."
+        },
+        "hatai.allowAIReadSecrets": {
+          "type": "boolean",
+          "default": false,
+          "description": "If false, copy for AI will always redact secrets."
+        },
+        "hatai.allowUserCopySecrets": {
+          "type": "boolean",
+          "default": false,
+          "description": "If false, copy safely will redact secrets into dummy values."
         },
         "hatai.entropyThreshold": {
           "type": "number",

@@ -10,11 +10,13 @@ const diagnostics_1 = require("./editor/diagnostics");
 const hoverProvider_1 = require("./editor/hoverProvider");
 const codelens_1 = require("./editor/codelens");
 const copyForAI_1 = require("./commands/copyForAI");
+const copySafe_1 = require("./commands/copySafe");
 const scanFile_1 = require("./commands/scanFile");
 const buildContext_1 = require("./commands/buildContext");
 const installGitHook_1 = require("./commands/installGitHook");
 const auditLogProvider_1 = require("./sidebar/auditLogProvider");
 const statsProvider_1 = require("./sidebar/statsProvider");
+const dashboardProvider_1 = require("./sidebar/dashboardProvider");
 const settings_1 = require("./config/settings");
 const policyLoader_1 = require("./config/policyLoader");
 const whitelist_1 = require("./config/whitelist");
@@ -23,6 +25,7 @@ let hoverProvider;
 let codeLensProvider;
 let auditLogProvider;
 let statsProvider;
+let dashboardProvider;
 let whitelistStore;
 let debounceTimer;
 let detectorConfig = {};
@@ -36,8 +39,8 @@ function buildDetectorConfig(policy) {
 }
 function scanDocument(document) {
     const text = document.getText();
-    const matches = (0, detector_1.detectSecrets)(text, detectorConfig);
-    const filtered = matches.filter((m) => !whitelistStore.isWhitelisted(m.value));
+    const secrets = (0, detector_1.detectSecrets)(text, detectorConfig);
+    const filtered = secrets.filter((m) => !whitelistStore.isWhitelisted(m.value));
     (0, diagnostics_1.updateDiagnostics)(document, filtered, diagnosticCollection);
     hoverProvider.updateMatches(document.uri, filtered);
     codeLensProvider.updateMatches(document.uri, filtered);
@@ -60,6 +63,8 @@ function debouncedScan(document) {
 function addAuditEntry(entry) {
     auditLogProvider.addEntry(entry);
     statsProvider.refresh();
+    dashboardProvider.pushStats();
+    dashboardProvider.pushTimeline();
 }
 function activate(context) {
     diagnosticCollection = vscode.languages.createDiagnosticCollection(diagnostics_1.DIAGNOSTIC_COLLECTION_NAME);
@@ -79,6 +84,8 @@ function activate(context) {
             for (const editor of vscode.window.visibleTextEditors) {
                 scanDocument(editor.document);
             }
+            statsProvider.refresh();
+            dashboardProvider.pushStats();
         }
     }));
     whitelistStore = new whitelist_1.WhitelistStore(context.workspaceState);
@@ -89,6 +96,8 @@ function activate(context) {
     auditLogProvider = new auditLogProvider_1.AuditLogProvider(context.workspaceState);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('hataiAuditLog', auditLogProvider));
     statsProvider = new statsProvider_1.StatsProvider(() => auditLogProvider.getEntries());
+    dashboardProvider = new dashboardProvider_1.DashboardProvider(context.extensionUri, context.workspaceState, () => auditLogProvider.getEntries());
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(dashboardProvider_1.DashboardProvider.viewType, dashboardProvider, { webviewOptions: { retainContextWhenHidden: true } }));
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => {
         if ((0, settings_1.isRealTimeScanningEnabled)() && e.document.uri.scheme === 'file') {
             debouncedScan(e.document);
@@ -110,6 +119,7 @@ function activate(context) {
         codeLensProvider.clearMatches(doc.uri);
     }));
     context.subscriptions.push((0, copyForAI_1.registerCopyForAICommand)(context, detectorConfig, addAuditEntry));
+    context.subscriptions.push((0, copySafe_1.registerCopySafeCommand)(context, detectorConfig, addAuditEntry));
     context.subscriptions.push((0, scanFile_1.registerScanFileCommand)(context, diagnosticCollection, detectorConfig, addAuditEntry));
     context.subscriptions.push((0, buildContext_1.registerBuildContextCommand)(context, detectorConfig, addAuditEntry));
     context.subscriptions.push((0, installGitHook_1.registerInstallGitHookCommand)(context));
@@ -119,6 +129,8 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('hatai.clearAuditLog', () => {
         auditLogProvider.clearLog();
         statsProvider.refresh();
+        dashboardProvider.pushStats();
+        dashboardProvider.pushTimeline();
         vscode.window.showInformationMessage('Hatai: Audit log cleared.');
     }));
     context.subscriptions.push(vscode.commands.registerCommand('hatai.markSafe', (value) => {
@@ -174,7 +186,7 @@ function activate(context) {
             .showInformationMessage('🛡️ Hatai activated! Your secrets are now protected.', 'Open Dashboard')
             .then((choice) => {
             if (choice === 'Open Dashboard') {
-                statsProvider.show();
+                void vscode.commands.executeCommand('hatai.dashboard.focus');
             }
         });
         void context.globalState.update('hatai.welcomeShown', true);
